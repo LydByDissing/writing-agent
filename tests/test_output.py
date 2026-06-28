@@ -9,7 +9,12 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.output import format_mailto_link, output_email, copy_to_clipboard
+from src.output import (
+    format_mailto_link,
+    output_email,
+    copy_to_clipboard,
+    open_in_mail_client,
+)
 import pyperclip
 
 
@@ -268,3 +273,68 @@ class TestCopyToClipboard:
         printed_messages = [str(call.args[0]) for call in mock_print.call_args_list]
         assert any("Could not copy to clipboard" in msg for msg in printed_messages)
         assert any("mailto:" in msg for msg in printed_messages)
+
+    @patch('src.output.subprocess.run')
+    @patch('src.output.shutil.which', side_effect=lambda cmd: f"/usr/bin/{cmd}")
+    @patch('src.output.pyperclip.copy')
+    @patch('builtins.print')
+    def test_output_email_opens_client_when_requested(self, mock_print, mock_copy, mock_which, mock_run):
+        """Arrange/Act/Assert: output_email opens the mail client when open_client=True"""
+        # Act
+        output_email("user@domain.com", "Subject", "Body", open_client=True)
+
+        # Assert
+        mock_run.assert_called_once()
+        printed_messages = [str(call.args[0]) for call in mock_print.call_args_list]
+        assert any("Opened in your default mail client" in msg for msg in printed_messages)
+
+
+class TestOpenInMailClient:
+    """Tests for the cross-platform mailto launcher."""
+
+    @patch('src.output.subprocess.run')
+    @patch('src.output.shutil.which', return_value="/usr/bin/open")
+    @patch('src.output.platform.system', return_value="Darwin")
+    def test_open_uses_open_on_macos(self, mock_system, mock_which, mock_run):
+        """Arrange/Act/Assert: macOS uses the `open` launcher"""
+        # Act
+        result = open_in_mail_client("mailto:a@b.com?subject=x")
+
+        # Assert
+        assert result is True
+        assert mock_run.call_args.args[0][0] == "open"
+
+    @patch('src.output.subprocess.run')
+    @patch('src.output.shutil.which', return_value="C:/Windows/System32/cmd.exe")
+    @patch('src.output.platform.system', return_value="Windows")
+    def test_open_uses_start_on_windows(self, mock_system, mock_which, mock_run):
+        """Arrange/Act/Assert: Windows uses `cmd /c start` launcher"""
+        # Act
+        result = open_in_mail_client("mailto:a@b.com?subject=x")
+
+        # Assert
+        assert result is True
+        cmd = mock_run.call_args.args[0]
+        assert cmd[0] == "cmd" and "start" in cmd
+
+    @patch('src.output.subprocess.run')
+    @patch('src.output.shutil.which', return_value="/usr/bin/xdg-open")
+    @patch('src.output.platform.system', return_value="Linux")
+    def test_open_uses_xdg_open_on_linux(self, mock_system, mock_which, mock_run):
+        """Arrange/Act/Assert: Linux uses the `xdg-open` launcher"""
+        # Act
+        result = open_in_mail_client("mailto:a@b.com?subject=x")
+
+        # Assert
+        assert result is True
+        assert mock_run.call_args.args[0][0] == "xdg-open"
+
+    @patch('src.output.shutil.which', return_value=None)
+    @patch('src.output.platform.system', return_value="Linux")
+    def test_open_returns_false_when_launcher_missing(self, mock_system, mock_which):
+        """Arrange/Act/Assert: returns False when no launcher binary is present"""
+        # Act
+        result = open_in_mail_client("mailto:a@b.com?subject=x")
+
+        # Assert
+        assert result is False

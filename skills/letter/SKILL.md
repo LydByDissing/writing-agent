@@ -179,31 +179,35 @@ On revision at this gate: return to **Phase 2 (DanishWriter)** — see Revision 
 
 ## Phase 5: OutputFormatter
 
+Run the `output_email` helper in `src/output.py`. It handles clipboard copy, mailto generation, and (optionally) opening the mail client, all cross-platform. The notes below describe what it does and the rules it must follow.
+
+### Recipient address
+
+Before producing the mailto link, you need `recipient_email`. The interview captures the recipient's name and role, not their address, so ask for it now if you do not have it:
+
+> "Hvad er modtagerens emailadresse? (Tryk retur for at springe over — så laver jeg linket uden modtager.)"
+
+A recipient address matters: a `mailto:` link with **no** address (`mailto:?subject=...`) is stripped of its scheme by many terminal and chat renderers, which breaks the link. Always include `recipient_email` when you have it.
+
 ### Clipboard
 
-Copy `body_final` to the system clipboard by running the first available shell command:
-
-```bash
-# Try Wayland first, then X11 (two tools), then fail gracefully
-printf '%s' "$body_final" | wl-copy 2>/dev/null ||
-printf '%s' "$body_final" | xclip -selection clipboard 2>/dev/null ||
-printf '%s' "$body_final" | xsel --clipboard --input 2>/dev/null ||
-echo "CLIPBOARD_UNAVAILABLE"
-```
-
-If all three commands fail (exit non-zero or output `CLIPBOARD_UNAVAILABLE`), show `body_final` in a fenced code block with this message above it:
+Copy `body_final` to the system clipboard. `copy_to_clipboard` tries `pyperclip` first, then falls back to the first available platform tool: `pbcopy` (macOS), `wl-copy` (Wayland), `xclip`/`xsel` (X11), or `clip` (Windows). If none succeed, show `body_final` in a fenced code block with this message above it:
 
 > "Clipboard ikke tilgængeligt — kopier teksten herunder manuelt:"
 
 ### Mailto link
 
-URL-encode `subject_final` and `body_final` (RFC 3986: space → `%20`, newline → `%0A`, `@` → `%40`, etc.). Then output a clickable markdown link in **exactly** this format — the scheme must be `mailto:` with no recipient address:
+URL-encode `subject_final` and `body_final` (RFC 3986: space → `%20`, newline → `%0A`, `@` → `%40`, etc.). Present the link as **plain text inside a fenced code block**, scheme included, so no renderer can strip the `mailto:` prefix:
 
 ```
-[Åbn i mailprogram](mailto:?subject=ENCODED_SUBJECT&body=ENCODED_BODY)
+mailto:RECIPIENT?subject=ENCODED_SUBJECT&body=ENCODED_BODY
 ```
 
-Do not put the URL in parentheses after plain text — it must be a proper markdown hyperlink so the terminal can render it as clickable.
+Do **not** present the mailto as a markdown hyperlink (`[text](mailto:...)`) — terminal and chat renderers drop the `mailto:` scheme, especially when the recipient is empty. The user copies the code-block line into their browser or runs it.
+
+### Opening the mail client (optional)
+
+If the user asks to open the email directly, call `open_in_mail_client` (or pass `open_client=True` to `output_email`). It launches the default client with `open` (macOS), `start` (Windows), or `xdg-open` (Linux). This opens a pre-filled compose window and never sends the email.
 
 ---
 
