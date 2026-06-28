@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "writing-agent",
+  "description": "Multilingual business email writer for Claude Code",
+  "owner": {
+    "name": "Tue Dissing",
+    "email": "tue@somersault.dk"
+  },
+  "plugins": [
+    {
+      "name": "writing-agent",
+      "description": "Conducts a structured Danish interview to capture intent, drafts a canonical Danish email, then translates and quality-reviews it in any target language.",
+      "author": {
+        "name": "Tue Dissing",
+        "email": "tue@somersault.dk"
+      },
+      "source": ".",
+      "category": "writing"
+    }
+  ]
+}
