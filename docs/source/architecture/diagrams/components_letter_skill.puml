@@ -1,0 +1,31 @@
+@startuml components_letter_skill
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component Diagram: letter skill
+
+Person(user, "Business Professional")
+System_Ext(claude, "Claude AI")
+
+Container_Boundary(skill, "letter skill") {
+    Component(interviewer, "Interviewer", "Agent persona", "Conducts Danish-language intent capture interview; enforces cold-canvas strict mode")
+    Component(writer, "DanishWriter", "Agent persona", "Writes canonical email in Danish; enforces human-tone rules")
+    Component(translator, "CulturalTranslator", "Sub-agent", "Translates to target language with cultural business adaptation; self-assesses confidence")
+    Component(expert, "LanguageExpert", "Sub-agent", "Proofreads as native speaker; scans for LLM markers; produces quality report")
+    Component(output, "OutputFormatter", "Python utility", "Copies to clipboard; generates mailto: link; prints to terminal")
+}
+
+Rel(user, interviewer, "Answers interview questions", "Danish")
+Rel(interviewer, writer, "Passes intent object")
+Rel(writer, user, "Presents Danish draft for approval")
+Rel(user, writer, "Approves or requests revision")
+Rel(writer, translator, "Passes approved Danish draft + intent", "Sub-agent spawn")
+Rel(translator, claude, "Translation + cultural adaptation", "Claude API")
+Rel(translator, expert, "Passes translated draft + adaptation notes", "Sub-agent spawn")
+Rel(expert, claude, "Proofreading + LLM marker scan", "Claude API")
+Rel(expert, user, "Presents final email + quality report for approval")
+Rel(user, expert, "Approves or requests revision (→ restart from DanishWriter)")
+Rel(expert, output, "Passes final email + subject")
+Rel(output, user, "Clipboard + mailto: link", "Terminal output")
+
+SHOW_LEGEND()
+@enduml

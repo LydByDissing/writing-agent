@@ -4,3 +4,23 @@
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Docs build output and venv
+docs/_build/
+docs/.venv/
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
