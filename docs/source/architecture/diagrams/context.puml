@@ -1,0 +1,19 @@
+@startuml context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title System Context: writing-agent
+
+Person(user, "Business Professional", "Danish-speaking; writes business emails in foreign languages")
+System_Boundary(sys, "writing-agent") {
+    System(skill, "writing-agent", "Claude Code skill that interviews, drafts in Danish, translates, and quality-checks business emails")
+}
+System_Ext(claude, "Claude AI", "Powers all agent personas via the Claude API")
+System_Ext(email, "Email Client", "Receives the finished email via mailto: link")
+
+Rel(user, skill, "Invokes /letter skill", "Claude Code")
+Rel(skill, claude, "Spawns sub-agents", "Claude agent framework")
+Rel(skill, email, "Opens pre-filled email", "mailto: link (on user request)")
+Rel(skill, user, "Delivers email body", "Terminal + clipboard")
+
+SHOW_LEGEND()
+@enduml

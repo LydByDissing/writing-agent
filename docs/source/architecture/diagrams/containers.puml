@@ -1,0 +1,22 @@
+@startuml containers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Container Diagram: writing-agent
+
+Person(user, "Business Professional", "Danish-speaking user")
+System_Ext(claude, "Claude AI", "LLM powering all agent personas")
+System_Ext(email, "Email Client", "Opened via mailto: link")
+
+System_Boundary(sys, "writing-agent") {
+    Container(skill, "letter skill", "SKILL.md + Claude agent framework", "Orchestrates the four-agent pipeline: Interviewer, DanishWriter, CulturalTranslator, LanguageExpert")
+    Container(src, "writing-agent src", "Python 3.12", "Style rule enforcement, mailto: generation, clipboard copy, language confidence heuristics")
+}
+
+Rel(user, skill, "Invokes /letter", "Claude Code CLI")
+Rel(skill, claude, "Spawns sub-agents (CulturalTranslator, LanguageExpert)", "Claude agent API")
+Rel(skill, src, "Calls utilities", "Python import")
+Rel(src, email, "Generates mailto: link", "URL scheme")
+Rel(src, user, "Copies to clipboard", "pyperclip")
+
+SHOW_LEGEND()
+@enduml
