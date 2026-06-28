@@ -453,10 +453,12 @@ class TestOutputFormatterPhase:
     def test_phase5_documents_clipboard_copy(self):
         """Arrange: Read SKILL.md
         Act: Extract Phase 5 section and search for clipboard copy instruction
-        Assert: pyperclip clipboard copy is documented"""
+        Assert: clipboard copy with a fallback chain (Wayland + X11) is documented"""
         section = self._phase5_section()
         assert "clipboard" in section.lower()
-        assert "pyperclip" in section
+        assert "wl-copy" in section
+        assert "xclip" in section
+        assert "xsel" in section
 
     def test_phase5_documents_mailto_link(self):
         """Arrange: Read SKILL.md
@@ -470,4 +472,5 @@ class TestOutputFormatterPhase:
         Act: Extract Phase 5 section and check for url-encoded requirement
         Assert: url-encoding of subject and body is documented"""
         section = self._phase5_section()
-        assert "url-encoded" in section or "url_encoded" in section or "urlencode" in section.lower()
+        lowered = section.lower()
+        assert "url-encode" in lowered or "url-encoded" in lowered or "urlencode" in lowered

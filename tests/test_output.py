@@ -9,7 +9,8 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.output import format_mailto_link, output_email
+from src.output import format_mailto_link, output_email, copy_to_clipboard
+import pyperclip
 
 
 class TestFormatMailtoLink:
@@ -213,3 +214,57 @@ class TestOutputEmail:
         mailto_messages = [msg for msg in printed_messages if "mailto:" in str(msg)]
         assert len(mailto_messages) > 0
         assert any("user@domain.com" in str(msg) for msg in mailto_messages)
+
+
+class TestCopyToClipboard:
+    """Tests for the clipboard helper and its pyperclip -> wl-copy/xclip/xsel fallback chain."""
+
+    @patch('src.output.pyperclip.copy')
+    def test_copy_uses_pyperclip_when_available(self, mock_copy):
+        """Arrange/Act/Assert: pyperclip is tried first and reported as success"""
+        # Arrange / Act
+        result = copy_to_clipboard("hello")
+
+        # Assert
+        mock_copy.assert_called_once_with("hello")
+        assert result is True
+
+    @patch('src.output.subprocess.run')
+    @patch('src.output.shutil.which')
+    @patch('src.output.pyperclip.copy', side_effect=pyperclip.PyperclipException("no backend"))
+    def test_copy_falls_back_to_shell_tool(self, mock_copy, mock_which, mock_run):
+        """Arrange/Act/Assert: when pyperclip has no backend, a shell tool is used"""
+        # Arrange: only wl-copy is installed
+        mock_which.side_effect = lambda cmd: "/usr/bin/wl-copy" if cmd == "wl-copy" else None
+
+        # Act
+        result = copy_to_clipboard("body text")
+
+        # Assert
+        assert result is True
+        mock_run.assert_called_once()
+        called_cmd = mock_run.call_args.args[0]
+        assert called_cmd[0] == "wl-copy"
+        assert mock_run.call_args.kwargs.get("input") == "body text"
+
+    @patch('src.output.shutil.which', return_value=None)
+    @patch('src.output.pyperclip.copy', side_effect=pyperclip.PyperclipException("no backend"))
+    def test_copy_returns_false_when_no_mechanism(self, mock_copy, mock_which):
+        """Arrange/Act/Assert: returns False when neither pyperclip nor shell tools work"""
+        # Act
+        result = copy_to_clipboard("body text")
+
+        # Assert
+        assert result is False
+
+    @patch('src.output.copy_to_clipboard', return_value=False)
+    @patch('builtins.print')
+    def test_output_email_warns_when_clipboard_unavailable(self, mock_print, mock_copy):
+        """Arrange/Act/Assert: output_email warns and still prints mailto when clipboard fails"""
+        # Act
+        output_email("user@domain.com", "Subject", "Body")
+
+        # Assert
+        printed_messages = [str(call.args[0]) for call in mock_print.call_args_list]
+        assert any("Could not copy to clipboard" in msg for msg in printed_messages)
+        assert any("mailto:" in msg for msg in printed_messages)
