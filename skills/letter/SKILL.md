@@ -179,7 +179,31 @@ On revision at this gate: return to **Phase 2 (DanishWriter)** — see Revision 
 
 ## Phase 5: OutputFormatter
 
-Copy `body_final` to clipboard via `pyperclip`. Print a `mailto:` link to the terminal with url-encoded `subject_final` and `body_final`.
+### Clipboard
+
+Copy `body_final` to the system clipboard by running the first available shell command:
+
+```bash
+# Try Wayland first, then X11 (two tools), then fail gracefully
+printf '%s' "$body_final" | wl-copy 2>/dev/null ||
+printf '%s' "$body_final" | xclip -selection clipboard 2>/dev/null ||
+printf '%s' "$body_final" | xsel --clipboard --input 2>/dev/null ||
+echo "CLIPBOARD_UNAVAILABLE"
+```
+
+If all three commands fail (exit non-zero or output `CLIPBOARD_UNAVAILABLE`), show `body_final` in a fenced code block with this message above it:
+
+> "Clipboard ikke tilgængeligt — kopier teksten herunder manuelt:"
+
+### Mailto link
+
+URL-encode `subject_final` and `body_final` (RFC 3986: space → `%20`, newline → `%0A`, `@` → `%40`, etc.). Then output a clickable markdown link in **exactly** this format — the scheme must be `mailto:` with no recipient address:
+
+```
+[Åbn i mailprogram](mailto:?subject=ENCODED_SUBJECT&body=ENCODED_BODY)
+```
+
+Do not put the URL in parentheses after plain text — it must be a proper markdown hyperlink so the terminal can render it as clickable.
 
 ---
 
